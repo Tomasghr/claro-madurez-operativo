@@ -7,6 +7,26 @@ import {
   LineChart, Line,
 } from "recharts";
 
+const DIRECCIONES = [
+  "Unidad de Mercado Masivo (UMC)",
+  "Unidad de Mercado Corporativo (UMM)",
+  "Gestión Humana",
+  "Financiera",
+  "Jurídica y Sostenibilidad",
+  "Tecnología",
+  "Planeación Estratégica",
+  "Auditoría",
+  "Riesgo y Control Interno",
+];
+
+function KearneySVG({ height = 18 }) {
+  return (
+    <svg height={height} viewBox="0 0 600 80" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <text x="0" y="62" fontFamily="'Outfit',system-ui,sans-serif" fontSize="72" fontWeight="900" letterSpacing="12" fill="#1A1A18">KEARNEY</text>
+    </svg>
+  );
+}
+
 // ─── DIMENSIONES (deben coincidir con ModeloOperativo.jsx) ────────────────────
 const DIMS_META = [
   { key:"talento", label:"Talento y Capacidades", num:"01", icon:"👥",
@@ -292,7 +312,7 @@ function MonitorTab({ evaluaciones, respuestas, selected, setSelected, onDelete,
     </span>
   );
 
-  const COL = `1fr 80px ${DIMS_META.map(()=>"52px").join(" ")} 120px 36px 36px`;
+  const COL = `minmax(60px,0.5fr) minmax(90px,1fr) 60px ${DIMS_META.map(()=>"48px").join(" ")} 100px 32px 32px`;
 
   return (
     <div>
@@ -317,6 +337,9 @@ function MonitorTab({ evaluaciones, respuestas, selected, setSelected, onDelete,
         <div style={{ display:"grid", gridTemplateColumns:COL, padding:"12px 20px", background:"#FBF9F7", borderBottom:"1px solid #E8E4DF", gap:8, alignItems:"center" }}>
           <div style={{ fontSize:11, fontWeight:700, color:"#999", textTransform:"uppercase", letterSpacing:".1em", cursor:"pointer" }} onClick={()=>toggleSort("score_global")}>
             Global<SortIcon col="score_global"/>
+          </div>
+          <div style={{ fontSize:10, fontWeight:700, color:"#999", textTransform:"uppercase", letterSpacing:".08em", cursor:"pointer" }} onClick={()=>toggleSort("direccion")}>
+            Dirección<SortIcon col="direccion"/>
           </div>
           <div style={{ fontSize:11, fontWeight:700, color:"#999", textTransform:"uppercase", letterSpacing:".1em" }}>Resp</div>
           {DIMS_META.map(d => (
@@ -345,6 +368,7 @@ function MonitorTab({ evaluaciones, respuestas, selected, setSelected, onDelete,
               <div style={{ textAlign:"center" }}>
                 <ScoreBadge v={e.score_global} pct={pct} />
               </div>
+              <div style={{ fontSize:10, color:"#666", overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }} title={e.direccion||"—"}>{e.direccion ? e.direccion.replace(/\s*\(.*\)/, "").split(" ").slice(0,3).join(" ") : "—"}</div>
               <div style={{ fontSize:12, color:"#AAA", textAlign:"center" }}>{eResps.length}/{TOTAL_SUBS}</div>
               {DIMS_META.map(d => (
                 <div key={d.key} style={{ textAlign:"center" }}>
@@ -824,6 +848,7 @@ export default function ControlOperativo() {
   const [selected, setSelected] = useState([]);
   const [confirmDelete, setConfirmDelete] = useState(null);
   const [toast, setToast] = useState(null);
+  const [dirFilter, setDirFilter] = useState("");
 
   useEffect(() => {
     const s = document.createElement("style");
@@ -907,6 +932,8 @@ export default function ControlOperativo() {
       {/* Sidebar */}
       <div style={{ width:220, flexShrink:0, background:"#FFFFFF", borderRight:"1px solid #E8E4DF", display:"flex", flexDirection:"column", padding:"24px 16px" }}>
         <div style={{ marginBottom:28 }}>
+          <KearneySVG height={14} />
+          <div style={{ height:1, background:"#E8E4DF", margin:"10px 0" }} />
           <div style={{ fontSize:11, fontWeight:700, color:RED, textTransform:"uppercase", letterSpacing:".14em", marginBottom:2 }}>Tablero de Control</div>
           <div style={{ fontSize:9.5, color:"#BBB", fontWeight:500 }}>Modelo Operativo · Claro</div>
         </div>
@@ -923,6 +950,26 @@ export default function ControlOperativo() {
             </button>
           ))}
         </nav>
+
+        {/* Filtro por dirección */}
+        <div style={{ marginTop:16, padding:"12px", borderRadius:12, background:"#F7F5F2", border:"1px solid #E8E4DF" }}>
+          <div style={{ fontSize:9, fontWeight:700, color:"#CCC", textTransform:"uppercase", letterSpacing:".12em", marginBottom:8 }}>Filtrar por dirección</div>
+          <select value={dirFilter} onChange={e=>setDirFilter(e.target.value)} style={{
+            width:"100%", padding:"8px 10px", borderRadius:8, border:"1px solid #E8E4DF",
+            background:"#FFFFFF", color:"#1A1A18", fontSize:11, fontWeight:500, cursor:"pointer",
+            outline:"none",
+          }}>
+            <option value="">Todas las direcciones</option>
+            {DIRECCIONES.map(d => <option key={d} value={d}>{d}</option>)}
+          </select>
+          {dirFilter && (
+            <button onClick={() => setDirFilter("")} style={{
+              marginTop:6, width:"100%", padding:"5px", borderRadius:6,
+              border:"none", background:RED+"12", color:RED,
+              fontSize:10, fontWeight:600, cursor:"pointer",
+            }}>✕ Limpiar filtro</button>
+          )}
+        </div>
 
         <div style={{ flex:1 }} />
 
@@ -947,18 +994,34 @@ export default function ControlOperativo() {
 
       {/* Main content */}
       <div style={{ flex:1, overflow:"auto", padding:"32px" }}>
-        {tab === "monitor" && (
-          <MonitorTab
-            evaluaciones={evaluaciones}
-            respuestas={respuestas}
-            selected={selected}
-            setSelected={setSelected}
-            onDelete={(ids) => setConfirmDelete(ids)}
-            loading={loading}
-          />
+        {dirFilter && (
+          <div style={{ marginBottom:16, padding:"8px 16px", borderRadius:10, background:RED+"10", border:`1px solid ${RED}25`, display:"flex", alignItems:"center", gap:8 }}>
+            <span style={{ fontSize:12 }}>🏢</span>
+            <span style={{ fontSize:12, fontWeight:600, color:RED }}>Filtrando por: {dirFilter}</span>
+            <span style={{ fontSize:11, color:"#AAA", marginLeft:4 }}>({evaluaciones.filter(e => e.direccion === dirFilter).length} evaluaciones)</span>
+          </div>
         )}
-        {tab === "analytics" && <AnalyticsTab evaluaciones={evaluaciones} respuestas={respuestas} />}
-        {tab === "roadmap"   && <RoadmapTab   evaluaciones={evaluaciones} respuestas={respuestas} />}
+        {(() => {
+          const filtEvals = dirFilter ? evaluaciones.filter(e => e.direccion === dirFilter) : evaluaciones;
+          const filtEvalIds = new Set(filtEvals.map(e => e.id));
+          const filtResps = dirFilter ? respuestas.filter(r => filtEvalIds.has(r.evaluacion_id)) : respuestas;
+          return (
+            <>
+              {tab === "monitor" && (
+                <MonitorTab
+                  evaluaciones={filtEvals}
+                  respuestas={filtResps}
+                  selected={selected}
+                  setSelected={setSelected}
+                  onDelete={(ids) => setConfirmDelete(ids)}
+                  loading={loading}
+                />
+              )}
+              {tab === "analytics" && <AnalyticsTab evaluaciones={filtEvals} respuestas={filtResps} />}
+              {tab === "roadmap"   && <RoadmapTab   evaluaciones={filtEvals} respuestas={filtResps} />}
+            </>
+          );
+        })()}
       </div>
 
       {confirmDelete && <ConfirmModal count={confirmDelete.length} onConfirm={doDelete} onCancel={()=>setConfirmDelete(null)} />}

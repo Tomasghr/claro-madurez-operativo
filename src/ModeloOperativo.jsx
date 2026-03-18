@@ -348,6 +348,18 @@ const LV = [
 ];
 function getLv(v) { return LV[Math.max(0, Math.min(3, (v||1)-1))]; }
 
+const DIRECCIONES = [
+  "Unidad de Mercado Masivo (UMC)",
+  "Unidad de Mercado Corporativo (UMM)",
+  "Gestión Humana",
+  "Financiera",
+  "Jurídica y Sostenibilidad",
+  "Tecnología",
+  "Planeación Estratégica",
+  "Auditoría",
+  "Riesgo y Control Interno",
+];
+
 const EC = "#7823DC";
 const ECD = "#5A1AA0";
 
@@ -402,6 +414,14 @@ function LvBadge({ v, sm }) {
       <span style={{ width:sm?4:5, height:sm?4:5, borderRadius:"50%", background:l.c }} />
       {sm ? l.label : `${v} · ${l.label}`}
     </span>
+  );
+}
+
+function KearneySVG({ height = 18 }) {
+  return (
+    <svg height={height} viewBox="0 0 600 80" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <text x="0" y="62" fontFamily="'Outfit',system-ui,sans-serif" fontSize="72" fontWeight="900" letterSpacing="12" fill="#1A1A18">KEARNEY</text>
+    </svg>
   );
 }
 
@@ -695,6 +715,8 @@ export default function ModeloOperativo() {
   const [guardarError, setGuardarError] = useState(false);
   const [evalId, setEvalId] = useState(null);
   const [confirmReset, setConfirmReset] = useState(false);
+  const [showDirModal, setShowDirModal] = useState(false);
+  const [direccion, setDireccion] = useState("");
   const assessScrollRef = useRef(null);
 
   useEffect(() => {
@@ -744,7 +766,7 @@ export default function ModeloOperativo() {
         ? parseFloat((globalVals.reduce((a,b)=>a+b,0)/globalVals.length).toFixed(2))
         : null;
 
-      const payload = { score_global, ...dimScores };
+      const payload = { score_global, ...dimScores, direccion: direccion || null };
 
       let id = evalId;
       if (id) {
@@ -784,7 +806,7 @@ export default function ModeloOperativo() {
 
   function doReset() {
     setAnswers({}); setActiveDim(0); setActiveSub(0);
-    setView("intro"); setEvalId(null);
+    setView("intro"); setEvalId(null); setDireccion("");
     setSavedOk(false); setConfirmReset(false);
   }
 
@@ -804,11 +826,15 @@ export default function ModeloOperativo() {
         display:"flex", alignItems:"center", justifyContent:"space-between",
         padding:"0 24px", gap:16,
       }}>
-        <div style={{ display:"flex", flexDirection:"column" }}>
-          <span style={{ fontSize:11, fontWeight:700, color:EC, textTransform:"uppercase", letterSpacing:".14em", lineHeight:1.2 }}>
-            Claro · Modelo Operativo
-          </span>
-          <span style={{ fontSize:9, color:T.inkSoft, fontWeight:500 }}>Estadios de Excelencia</span>
+        <div style={{ display:"flex", alignItems:"center", gap:14 }}>
+          <KearneySVG height={16} />
+          <div style={{ width:1, height:28, background:T.borderSm }} />
+          <div style={{ display:"flex", flexDirection:"column" }}>
+            <span style={{ fontSize:11, fontWeight:700, color:EC, textTransform:"uppercase", letterSpacing:".14em", lineHeight:1.2 }}>
+              Claro · Modelo Operativo
+            </span>
+            <span style={{ fontSize:9, color:T.inkSoft, fontWeight:500 }}>Estadios de Excelencia</span>
+          </div>
         </div>
 
         {totalScore && (
@@ -866,7 +892,7 @@ export default function ModeloOperativo() {
       {/* ═══ CONTENT ═══ */}
       {view === "intro" && (
         <div style={{ flex:1, overflow:"auto" }}>
-          <IntroTab onStart={() => setView("assessment")} />
+          <IntroTab onStart={() => setShowDirModal(true)} />
         </div>
       )}
 
@@ -1116,6 +1142,68 @@ export default function ModeloOperativo() {
             <div style={{ display:"flex", gap:10 }}>
               <button onClick={() => setConfirmReset(false)} style={{ flex:1, padding:"11px", borderRadius:10, border:`1px solid ${T.borderSm}`, background:T.surface, color:T.inkMid, fontWeight:600, fontSize:13, cursor:"pointer" }}>Cancelar</button>
               <button onClick={doReset} style={{ flex:1, padding:"11px", borderRadius:10, border:"none", background:`linear-gradient(135deg,${EC},${ECD})`, color:"#fff", fontWeight:700, fontSize:13, cursor:"pointer" }}>Reiniciar</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ═══ MODAL SELECCIÓN DE DIRECCIÓN ═══ */}
+      {showDirModal && (
+        <div style={{ position:"fixed", inset:0, background:"rgba(0,0,0,0.6)", display:"flex", alignItems:"center", justifyContent:"center", zIndex:500, backdropFilter:"blur(4px)" }}>
+          <div className="scale-in" style={{ width:440, background:T.card, borderRadius:22, border:`1px solid ${T.borderSm}`, padding:"36px 32px", boxShadow:"0 40px 80px rgba(0,0,0,0.15)" }}>
+            <div style={{ textAlign:"center", marginBottom:24 }}>
+              <div style={{
+                display:"inline-flex", alignItems:"center", justifyContent:"center",
+                width:52, height:52, borderRadius:14,
+                background:EC+"15", border:`1.5px solid ${EC}25`, marginBottom:14,
+              }}>
+                <span style={{ fontSize:26 }}>🏢</span>
+              </div>
+              <div style={{ fontSize:18, fontWeight:800, color:T.ink, marginBottom:6 }}>Selecciona tu dirección</div>
+              <div style={{ fontSize:12, color:T.inkMid, lineHeight:1.6 }}>
+                Elige la dirección a la que perteneces para personalizar la evaluación.
+              </div>
+            </div>
+
+            <div style={{ display:"flex", flexDirection:"column", gap:6, marginBottom:24, maxHeight:320, overflow:"auto" }}>
+              {DIRECCIONES.map(d => (
+                <button key={d} onClick={() => setDireccion(d)} style={{
+                  padding:"12px 16px", borderRadius:12, border:`2px solid ${direccion===d?EC:T.borderSm}`,
+                  background:direccion===d?EC+"10":T.card,
+                  color:direccion===d?EC:T.ink,
+                  fontWeight:direccion===d?700:500, fontSize:13,
+                  cursor:"pointer", textAlign:"left",
+                  transition:"all .15s",
+                  display:"flex", alignItems:"center", gap:10,
+                }}>
+                  <span style={{
+                    width:20, height:20, borderRadius:"50%",
+                    border:`2px solid ${direccion===d?EC:T.borderMd}`,
+                    background:direccion===d?EC:"transparent",
+                    display:"flex", alignItems:"center", justifyContent:"center",
+                    flexShrink:0, transition:"all .15s",
+                  }}>
+                    {direccion===d && <span style={{ color:"#fff", fontSize:11, fontWeight:900 }}>✓</span>}
+                  </span>
+                  {d}
+                </button>
+              ))}
+            </div>
+
+            <div style={{ display:"flex", gap:10 }}>
+              <button onClick={() => setShowDirModal(false)} style={{
+                flex:1, padding:"12px", borderRadius:12,
+                border:`1px solid ${T.borderSm}`, background:T.surface,
+                color:T.inkMid, fontWeight:600, fontSize:13, cursor:"pointer",
+              }}>Cancelar</button>
+              <button onClick={() => { setShowDirModal(false); setView("assessment"); }} disabled={!direccion} style={{
+                flex:1, padding:"12px", borderRadius:12, border:"none",
+                background:direccion?`linear-gradient(135deg,${EC},${ECD})`:"#E8E4DF",
+                color:direccion?"#fff":"#AAA",
+                fontWeight:700, fontSize:13,
+                cursor:direccion?"pointer":"not-allowed",
+                boxShadow:direccion?`0 4px 14px ${EC}40`:"none",
+              }}>Comenzar evaluación →</button>
             </div>
           </div>
         </div>
