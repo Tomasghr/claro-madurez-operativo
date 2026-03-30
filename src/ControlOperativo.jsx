@@ -535,6 +535,102 @@ function AnalyticsTab({ evaluaciones, respuestas }) {
         </div>
       </AnalyticsCard>
 
+      {/* Estadísticas detalladas por componente y sub-componente */}
+      <AnalyticsCard style={{ padding:0, overflow:"hidden" }}>
+        <div style={{ padding:"20px 24px", borderBottom:"1px solid #F0EDE9" }}>
+          <AnalyticsLabel style={{ marginBottom:2 }}>Estadísticas Detalladas por Componente</AnalyticsLabel>
+          <div style={{ fontSize:11, color:"#AAA" }}>Promedio, mínimo, máximo y dispersión por sub-componente</div>
+        </div>
+        <div style={{ padding:"16px 24px", display:"flex", flexDirection:"column", gap:20 }}>
+          {DIMS_META.map(d => {
+            const dimVals = enriched.map(e => e[`score_${d.key}`]).filter(Boolean);
+            const dimAvg = avgArr(dimVals);
+            const dimMin = dimVals.length ? Math.min(...dimVals) : null;
+            const dimMax = dimVals.length ? Math.max(...dimVals) : null;
+            const dimStd = dimVals.length > 1 ? parseFloat(Math.sqrt(dimVals.reduce((s,v)=>s+Math.pow(v-(dimVals.reduce((a,b)=>a+b,0)/dimVals.length),2),0)/dimVals.length).toFixed(2)) : 0;
+            const dimLv = dimAvg ? lvMeta(dimAvg) : null;
+
+            const subStats = d.subDetails.map(sub => {
+              const vals = respuestas
+                .filter(r => enriched.map(e=>e.id).includes(r.evaluacion_id) && r.subdimension_id === sub.id)
+                .map(r => r.valor).filter(Boolean);
+              const avg = avgArr(vals);
+              const min = vals.length ? Math.min(...vals) : null;
+              const max = vals.length ? Math.max(...vals) : null;
+              const std = vals.length > 1 ? parseFloat(Math.sqrt(vals.reduce((s,v)=>s+Math.pow(v-(vals.reduce((a,b)=>a+b,0)/vals.length),2),0)/vals.length).toFixed(2)) : 0;
+              return { ...sub, avg, min, max, std, n: vals.length };
+            });
+
+            return (
+              <div key={d.key} style={{ borderRadius:14, border:"1px solid #E8E4DF", overflow:"hidden" }}>
+                {/* Header del componente */}
+                <div style={{ background:"linear-gradient(135deg,#FAFAF8,#F5F3F0)", padding:"14px 20px", borderBottom:"1px solid #E8E4DF", display:"flex", alignItems:"center", gap:12 }}>
+                  <span style={{ fontSize:20 }}>{d.icon}</span>
+                  <div style={{ flex:1 }}>
+                    <div style={{ display:"flex", alignItems:"center", gap:8 }}>
+                      <span style={{ fontSize:10, fontWeight:700, color:"#AAA", background:"#E8E4DF", padding:"2px 8px", borderRadius:99 }}>{d.num}</span>
+                      <span style={{ fontSize:14, fontWeight:800, color:"#1A1A18" }}>{d.label}</span>
+                      {dimLv && <span style={{ padding:"2px 10px", borderRadius:99, fontSize:10, fontWeight:700, background:dimLv.c+"18", color:dimLv.c }}>{dimLv.label}</span>}
+                    </div>
+                  </div>
+                  {/* KPIs del componente */}
+                  <div style={{ display:"flex", gap:16 }}>
+                    {[
+                      { l:"Prom", v:dimAvg?.toFixed(2), c:dimLv?.c },
+                      { l:"Mín", v:dimMin?.toFixed(1), c:"#DC2626" },
+                      { l:"Máx", v:dimMax?.toFixed(1), c:"#059669" },
+                      { l:"Disp", v:dimStd?.toFixed(2), c:dimStd>=0.8?"#DC2626":dimStd>=0.4?"#D97706":"#059669" },
+                    ].map((k,i)=>(
+                      <div key={i} style={{ textAlign:"center", minWidth:44 }}>
+                        <div style={{ fontSize:8.5, fontWeight:700, color:"#CCC", textTransform:"uppercase", letterSpacing:".1em" }}>{k.l}</div>
+                        <div style={{ fontSize:15, fontWeight:900, color:k.c||"#AAA" }}>{k.v||"—"}</div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Tabla de sub-componentes */}
+                <div style={{ padding:"0" }}>
+                  {/* Header de tabla */}
+                  <div style={{ display:"grid", gridTemplateColumns:"1fr 60px 60px 60px 60px 50px", gap:0, padding:"10px 20px", borderBottom:"1px solid #F0EDE9" }}>
+                    {["Sub-componente","Prom","Mín","Máx","Disp","n"].map((h,i)=>(
+                      <div key={i} style={{ fontSize:9, fontWeight:700, color:"#CCC", textTransform:"uppercase", letterSpacing:".1em", textAlign:i>0?"center":"left" }}>{h}</div>
+                    ))}
+                  </div>
+                  {subStats.map((s,i) => {
+                    const sl = s.avg ? lvMeta(s.avg) : null;
+                    const dispColor = s.std >= 0.8 ? "#DC2626" : s.std >= 0.4 ? "#D97706" : "#059669";
+                    return (
+                      <div key={s.id} style={{ display:"grid", gridTemplateColumns:"1fr 60px 60px 60px 60px 50px", gap:0, padding:"10px 20px", borderBottom:i<subStats.length-1?"1px solid #F8F6F3":"none", alignItems:"center" }}>
+                        <div style={{ display:"flex", alignItems:"center", gap:8 }}>
+                          <div style={{ width:6, height:6, borderRadius:99, background:sl?.c||"#E8E4DF", flexShrink:0 }}/>
+                          <span style={{ fontSize:11.5, fontWeight:600, color:"#444" }}>{s.label}</span>
+                          {sl && <span style={{ fontSize:8.5, fontWeight:700, color:sl.c, background:sl.c+"15", padding:"1px 6px", borderRadius:99, flexShrink:0 }}>{sl.label}</span>}
+                        </div>
+                        <div style={{ textAlign:"center" }}>
+                          <span style={{ fontSize:13, fontWeight:800, color:sl?.c||"#AAA" }}>{s.avg?.toFixed(2)||"—"}</span>
+                        </div>
+                        <div style={{ textAlign:"center" }}>
+                          <span style={{ fontSize:12, fontWeight:600, color:s.min?"#DC2626":"#CCC" }}>{s.min?.toFixed(1)||"—"}</span>
+                        </div>
+                        <div style={{ textAlign:"center" }}>
+                          <span style={{ fontSize:12, fontWeight:600, color:s.max?"#059669":"#CCC" }}>{s.max?.toFixed(1)||"—"}</span>
+                        </div>
+                        <div style={{ textAlign:"center", display:"flex", alignItems:"center", justifyContent:"center", gap:4 }}>
+                          <span style={{ fontSize:12, fontWeight:700, color:s.n>0?dispColor:"#CCC" }}>{s.n>0?s.std.toFixed(2):"—"}</span>
+                          {s.n>1 && s.std>=0.8 && <span style={{ fontSize:8, color:"#DC2626" }}>!</span>}
+                        </div>
+                        <div style={{ textAlign:"center", fontSize:10, color:"#CCC", fontWeight:600 }}>{s.n}</div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      </AnalyticsCard>
+
       {/* Brechas */}
       <AnalyticsCard style={{ padding:0, overflow:"hidden" }}>
         <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", padding:"20px 24px", borderBottom:"1px solid #F0EDE9" }}>
